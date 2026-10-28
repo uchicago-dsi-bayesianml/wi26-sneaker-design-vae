@@ -1,0 +1,11 @@
+# Data is never committed. Notebook 01 regenerates data/ from the UT Zappos50K download.
+data/*
+!data/README.md
+
+# Editor and OS clutter
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+
+# Local outputs
+artifacts/generated/custom_sneaker_interactive.png

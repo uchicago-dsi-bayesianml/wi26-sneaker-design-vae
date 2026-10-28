@@ -1,279 +1,133 @@
-# New Sneaker Designs Generation from Existing Design Data
-Implementing VAE to learn from existing popular sneaker designs for the fashion patterns, generating new novel shoe design candidates.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.png">
+  <img alt="The University of Chicago, MS in Applied Data Science. ADSP 32014 course project." src=".github/assets/banner-light.png">
+</picture>
 
-## Collaborators
-- Ethan Wang
-- Steven Si
-- Runyu Yang
-- Diana Chen
-- Wenbo Zhao
+# New Sneaker Designs from Existing Design Data
 
-**Web App**: [http://dfuaix9nq1.com/](http://dfuaix9nq1.com/)
+> **Example project from Winter 2026.** This is a copy of [hjjhkr/Sneaker-Design-VAE](https://github.com/hjjhkr/Sneaker-Design-VAE), shown with the authors' work and commit history intact. Their own write-up is [REPORT.md](REPORT.md). Course staff wrote this README and made the edits listed under [Changes by course staff](#changes-by-course-staff), including the section on [what to learn from this project](#what-to-learn-from-this-project).
 
-This repository presents a full notebook-driven workflow for sneaker image generation using a Beta-VAE model, from preprocessing to interactive custom design.
+Can a model learn what sneakers look like from 12,856 catalog photos and then propose new ones, with a handful of sliders that each change one thing about the shoe? The team trained a β-variational autoencoder with 16 latent dimensions on the sneaker photos of the UT Zappos50K dataset at 64 × 64 pixels, examined its latent space eight ways, and put the decoder behind sliders in a notebook and a small web page.
 
-## Notebook Navigation
+## Summary
 
-1. [01 - Data Preprocessing](#01---data-preprocessing)
-2. [02 - Baseline Training (MSE + Fixed Beta)](#02---baseline-training-mse--fixed-beta)
-3. [03 - Improved Training (BCE + KL Annealing)](#03---improved-training-bce--kl-annealing)
-4. [04 - Latent Analysis with Rich Visualizations](#04---latent-analysis-with-rich-visualizations)
-5. [05 - Interactive Custom Sneaker Design](#05---interactive-custom-sneaker-design)
+The pipeline is five notebooks. The first pads every photo to a white square and resizes it to 64 × 64. The second trains a convolutional β-VAE with a mean-squared-error reconstruction term and β = 4 for 20 epochs. The third continues from those weights with a binary-cross-entropy reconstruction term and β annealed linearly from 0 to 2 over the first 10 of 30 epochs, which the authors call the improved model. The fourth examines the improved model's latent space: reconstructions, traversals along single dimensions, histograms and correlations of the posterior means, KL per dimension, decoder sensitivity per dimension, samples from the prior, and an interpolation between two shoes. The fifth, and a small HTTP server in `web/`, let a user set the 16 latent values with sliders and decode them. The trained checkpoints are committed, so the analysis and the designer run without retraining.
 
----
-## 00 - Project Overview
+The model reconstructs silhouettes and colors and loses laces, logos and texture, as a 64 × 64 VAE does, and its prior samples are plausible blurry sneakers in many colors. The latent dimensions mostly encode brightness and hue. The write-up's claims that specific dimensions control the shoe's shape and sole come from a placeholder example, not from the traversal figure, which contradicts them; see [what to learn from this project](#what-to-learn-from-this-project). Nothing is evaluated on held-out images, and the two training runs are never compared by a number.
 
-This project uses the UT Zappos50K dataset, which contains over 50,000 catalog images of shoes collected from Zappos.com. We focus on a subset of 12,856 sneaker and athletic shoe images, which provide relatively consistent product photos with clean backgrounds and standardized viewpoints.
+## Team and contributions
 
-The goal of this project is to learn the visual structure of sneaker designs using a β-Variational Autoencoder (β-VAE). The objective is to learn a compact latent representation of sneaker images using a β-Variational Autoencoder (β-VAE). This representation captures underlying visual structure such as shape, color, and style. By sampling from the learned latent space, the model can generate new sneaker designs.
+Team "GANgsters", Winter 2026.
 
-## 01 - Data Preprocessing
+- **Ethan Wang** ([@Alpha-sig](https://github.com/Alpha-sig)): the proposal and outline; the original notebook with the preprocessing, the model, both training runs and the first traversal and custom-design cells; the write-up's section on generative models and β-VAE.
+- **Steven Si** ([@hjjhkr](https://github.com/hjjhkr)): the repository; the split of that notebook into the five numbered notebooks, including the latent-analysis suite; the environment file; the web designer and its server; the write-up's structure and its sections on the two training runs.
+- **Wenbo Zhao** ([@flyingcarrote](https://github.com/flyingcarrote)): the write-up's project overview and dataset audit.
+- **Diana Chen** ([@dqCHENdq](https://github.com/dqCHENdq)): the write-up's readings of the eight latent-analysis figures.
+- **Justin Yang** ([@yryry0325-oss](https://github.com/yryry0325-oss)): the write-up's outlook section. He appears as Runyu Yang in the authors' list.
 
-**Notebook**: `notebooks/01_data_preprocessing.ipynb`
+The repository ran from February 27 to March 12, 2026, after a proposal in early February. The attributions follow the [commit history](https://github.com/uchicago-dsi-bayesianml/wi26-sneaker-design-vae/commits/main); the GitHub handles were matched to names through the course roster.
 
-### Goal
-Convert raw sneaker images into a clean model-ready dataset (`64 x 64`, RGB, white background, square format), while preserving brand/class folder structure.
+## Getting started
 
-### Workflow Summary
-- Read original raw images recursively.
-- Convert each image to RGB.
-- Apply center padding to square white canvas.
-- Resize to `64 x 64`.
-- Save processed output under the unified data directory.
+The authors provide a conda environment with PyTorch 2.2 and Python 3.10.
 
-### Main Process
+```sh
+conda env create -f environment.yml
+conda activate sneaker-design-vae
+jupyter lab
+```
 
-A dataset audit was conducted before preprocessing to evaluate image quality and consistency.
+Get the data as described under [Data](#data) and run the notebooks in order. Notebooks 02 and 03 train for 20 and 30 epochs at batch size 128, a few minutes each on an Apple or NVIDIA GPU and much longer on a CPU. The trained checkpoints are committed under `artifacts/checkpoints/`, so notebook 04 (which needs the data), notebook 05 (which does not) and the web designer all run without training:
 
-Raw Dataset Statistics
+```sh
+python web/design_server.py --port 8000
+```
 
-| Metric | Value |
-|------|------|
-| Total sneaker images | 12,856 |
-| Readable images | 12,856 |
-| Corrupted images | 0 |
-| Average image size | 136 × 102 |
-| Average aspect ratio | 1.33 |
-| Color mode distribution | RGB (100%) |
+Then open http://127.0.0.1:8000. The page has a slider per latent dimension and calls the server to decode. The hosted copy that the authors' write-up links to is no longer theirs; the domain now serves an unrelated application.
 
-The raw images vary in resolution and aspect ratio, making standardization necessary before model training.
+## Data
 
-During preprocessing, each image is first padded with a white background to create a square canvas, ensuring that the original shoe proportions are preserved. The images are then resized to 64 × 64 resolution and converted to RGB format.
+Data files are never committed to this repository. Git ignores everything in `data/` except its README.
 
-#### Preprocessing example
-| Raw Image |  | Padded Image |  | Resized Image |
-|-----------|---|--------------|---|---------------|
-| <p align="center"><img src="https://github.com/user-attachments/assets/8283b35e-043f-4c71-87f6-c69efababf61" width="140"><br>Raw Image (136×102)</p> | ➜ | <p align="center"><img src="https://github.com/user-attachments/assets/c57efa1c-376b-4a86-a889-1fa2db8a26c8" width="140"><br>Padded Image (136×136)</p> | ➜ | <p align="center"><img src="https://github.com/user-attachments/assets/e5236032-bee8-4952-9505-aae21eff51d3" width="70"><br>Resized Image (64×64)</p> |
+- **Source:** [UT Zappos50K](https://vision.cs.utexas.edu/projects/finegrained/utzap50k/) (Yu and Grauman, CVPR 2014 and CVPR 2017), 50,025 catalog photos from Zappos.com, shot on white in a consistent orientation. The project uses the *Shoes › Sneakers and Athletic Shoes* category: 12,856 photos in 336 brand folders, averaging 136 × 102 pixels.
+- **Terms:** academic, non-commercial use only, with a citation to the two papers, as stated on the dataset page.
+- **How to get it:** `ut-zap50k-images.zip` (291 MB) from the dataset page, or the [Kaggle mirror](https://www.kaggle.com/datasets/aryashah2k/large-shoe-dataset-ut-zappos50k).
+- **Where to put it:** anywhere. Set `RAW_DATA_DIR` in notebook 01 to the category folder; the notebook writes `data/<brand>/<id>.jpg` at 64 × 64, which the training notebooks read with `ImageFolder`. The brand folders only give the loader a structure; the labels are not used.
 
+## Project structure
 
-Processed Dataset Characteristics
-| Metric | Value |
-|------|------|
-| Processed images | 12,856 |
-| Image resolution | 64 × 64 |
-| Aspect ratio | 1.0 |
-| Color mode | RGB |
+| Path | Contents |
+|---|---|
+| `REPORT.md` | The authors' write-up: overview, preprocessing audit, the β-VAE argument, the two training runs, the eight latent figures with readings, the designer, outlook. |
+| `notebooks/01_data_preprocessing.ipynb` | Pads the photos to white squares and resizes them to 64 × 64 into `data/`. |
+| `notebooks/02_baseline_training.ipynb` | The β-VAE; MSE reconstruction, β = 4, 20 epochs; saves `beta_vae_baseline.pt`. |
+| `notebooks/03_improved_training_with_annealing.ipynb` | Continues from the baseline; BCE reconstruction, β annealed 0 → 2 over 10 epochs, 30 epochs; saves `beta_vae_improved.pt`. |
+| `notebooks/04_latent_analysis_rich_visualization.ipynb` | The eight latent-space diagnostics on the improved model. |
+| `notebooks/05_custom_design_interactive.ipynb` | Sliders over the 16 latent values with ipywidgets. |
+| `web/design_server.py`, `web/custom_design_interactive.html` | The same designer as a page served by a small Python HTTP server that loads the improved checkpoint. |
+| `artifacts/checkpoints/` | The baseline and improved checkpoints, about 6 MB each, with their training histories. `beta_vae_init.pt` holds untrained weights and is used by nothing. |
+| `artifacts/generated/custom_sneaker.png` | One 64 × 64 decode from the designer. |
+| `docs/images/` | The training curves and the eight analysis figures shown in the write-up. |
+| `environment.yml` | The conda environment. |
 
----
+## Method
 
-## 02 - Baseline Training (Beta-VAE)
+**Preprocessing.** Each photo is converted to RGB, pasted centered onto a white square, and resized to 64 × 64 with Lanczos resampling. Pixels are scaled to [0, 1].
 
-**Notebook**: `notebooks/02_baseline_training.ipynb`
+**Model.** The encoder is four stride-2 convolutions with 4 × 4 kernels and 32, 64, 128 and 256 channels, batch normalization after all but the first, and LeakyReLU(0.2), taking the image to 256 × 4 × 4 = 4,096 features, then two linear layers to the 16-dimensional mean and log-variance. The decoder is a linear layer back to 4,096 features, reshaped, and four transposed convolutions mirroring the encoder, ending in a sigmoid. About 1.6 million parameters.
 
-## The Philosophy of Generative Models
+**Objective.** For each image, a reconstruction term summed over the 12,288 pixel values plus β times the closed-form KL divergence from the Gaussian posterior N(μ(x), σ²(x)) to the prior N(0, I), summed over the 16 dimensions. The losses the notebooks print are per image.
 
-For many modalities, the data we observe is determined by unseen abstract variables, denoted as latent variable $z$. The best intuition for this is **Plato’s Allegory of the Cave**: prisoners see only 2D shadows (our observed data, like images of sneakers) cast by unseen 3D objects (the latent variables, like color, shape, and size). While we cannot directly observe these hidden factors, generative models allow us to infer and approximate them. 
+**Two runs.** The baseline uses mean squared error with β = 4 for 20 epochs from random weights. The improved run loads the baseline weights, switches to binary cross-entropy, and anneals β linearly from 0 to 2 over the first 10 of 30 epochs. Both use Adam at 10⁻³, batch size 128 and seed 42, and ran on an Apple GPU. All 12,856 images are used for training; there is no validation or test split.
 
-**The Compression Caveat:** Unlike the allegory where the true objects are higher-dimensional, in generative modeling, we aim to learn *lower-dimensional* latent representations. This acts as a powerful form of compression, filtering out noise to uncover the true, semantically meaningful structure underlying the observations.
-![An_Illustration_of_The_Allegory_of_the_Cave,_from_Plato’s_Republic](https://github.com/user-attachments/assets/7eb90188-b285-4e78-bb2a-e5c2bbe5f51b)
+**Latent analysis.** On the improved model. Reconstructions of eight training images; traversals of dimensions 0 to 9 from −3 to 3 around one training image's posterior mean, the other dimensions held fixed; histograms of the posterior means and their 16 × 16 correlation matrix over 7,680 images; mean KL per dimension over the same images; the mean absolute pixel change from moving each dimension by ±2; 16 decodes of z drawn from the prior; a ten-step interpolation between two images' posterior means.
 
-## VAE vs. $\beta$-VAE: Achieving Controlled Generation
+**Designer.** The sliders set z directly, in [−3.5, 3.5] per dimension, and the decoder renders it.
 
-To understand our architectural choices, we must look at the optimization objectives of Variational Autoencoders (VAEs).
+### What is Bayesian here
 
-### 1. The Standard VAE & Feature Entanglement
-A standard VAE optimizes the Evidence Lower Bound (ELBO), which balances two losses:
+The VAE is amortized variational inference. The encoder is the approximate posterior over a 16-dimensional latent code, a Gaussian whose mean and variance are functions of the image; the decoder is the likelihood of the image given the code; the prior on the code is a standard normal. The training loss is the negative evidence lower bound: a reconstruction term that is a log-likelihood up to a constant (Gaussian for the mean squared error, Bernoulli for the binary cross-entropy) plus the KL term that keeps the posterior close to the prior, in closed form because both are Gaussian. The reparameterization trick makes a one-sample Monte Carlo estimate of the bound differentiable.
 
-$$\mathcal{L} = \text{Reconstruction Loss} + D_{KL}(q_\phi(z|x) || p(z))$$
+β changes what is being optimized. With β ≠ 1 the loss is no longer a bound on the log-likelihood of the data; it is a rate–distortion trade-off, in which the KL term is how many nats the code may carry about the image and the reconstruction term is the distortion that remains. The KL-per-dimension plot in notebook 04 reads that rate dimension by dimension. KL annealing is an optimization schedule rather than a different model: training begins as a plain autoencoder and the prior tightens gradually, the usual remedy for posteriors that collapse onto the prior early in training.
 
-- **Reconstruction Loss:** Ensures the generated image closely resembles the input.
-- **KL Divergence:** Regularizes the latent space to approximate a standard normal distribution.
+What the project does not do is use the posterior as a distribution. The encoder's variances are computed and never looked at: traversals, interpolations, prior samples and the designer all decode point values of the code, and the model's uncertainty about where a shoe sits in the latent space appears in no figure. Nothing compares the bound across the two runs or across values of β, on training or held-out images.
 
-**The Problem:** In a standard VAE, to perfectly minimize reconstruction error, the model often takes shortcuts. It mixes different attributes (e.g., shoe color, sole thickness, ankle height) together across the latent dimensions. This is known as **Feature Entanglement**. If you try to modify the shoe color, the model might accidentally change it from a low-top to a high-top.
+## Results
 
-### 2. The $\beta$-VAE Improvement
-$\beta$-VAE introduces a simple but highly effective hyperparameter, $\beta$, to heavily penalize the KL divergence term:
+From the notebooks' training logs, per image, after the last epoch.
 
-$$\mathcal{L} = \text{Reconstruction Loss} + \beta \cdot D_{KL}(q_\phi(z|x) || p(z))$$
+| Run | Reconstruction term | β | Epochs | Final reconstruction loss | Final KL (nats) |
+|---|---|---|---|---|---|
+| Baseline | MSE, summed | 4 | 20 | 173.6 (RMSE ≈ 0.12 per pixel value) | 14.7 |
+| Improved | BCE, summed | 0 → 2 over 10 epochs, then 2 | 30, from the baseline weights | 2,696 (≈ 0.22 nats per pixel value) | 31.2 |
 
-By setting $\beta > 1$ (e.g., $\beta = 2.0$ in our final model), we impose a strict **Information Bottleneck**. 
+The improved model's reconstructions keep each shoe's silhouette, overall color and sole and lose laces, logos and texture; a high-top stays a high-top. Its 16 prior samples are plausible, blurry, mostly low-top sneakers in many colors. In the traversal grid, dimensions 2 and 3 run the shoe from black to white, dimensions 4, 5 and 9 shift its hue (blue to tan, red to blue, yellow to blue), and dimensions 6, 7 and 8 change almost nothing visible. Dimensions 2, 3 and 11 carry the most information, about 2.6 to 3.0 nats each, and move the most pixels; every one of the 16 dimensions carries between about 1.2 and 3.0 nats, so none has collapsed. The posterior means are roughly bell-shaped with low pairwise correlations. The interpolation between two shoes is smooth.
 
-### 3. Why This Excels at Sneaker Design
-The heavy KL penalty forces the posterior distribution to closely match the prior (a standard normal distribution with a diagonal covariance matrix). To survive this bottleneck and still reconstruct the image successfully, the model *must* discover statistically independent generative factors. 
+## What to learn from this project
 
-It naturally **disentangles** the features. Instead of a messy, tangled latent space, $\beta$-VAE organizes the data into an independent, human-interpretable control console. Based on our latent traversal experiments, this means:
-- **Dim 8** independently controls the geometric shape (low-top vs. high-top).
-- **Dim 9** independently controls the main body color.
-- **Dim 4 & 5** independently control the sole details.
+Course staff added this section. The pipeline is sound and complete; the points below are about reading your own figures, about β, and about measurement.
 
-Ultimately, $\beta$-VAE transforms a standard random image generator into a **precise, controllable design tool**.
+- **Report what the figure shows, not what you expected.** The write-up says that "based on our latent traversal experiments" dimension 8 controls low-top versus high-top, dimension 9 the body color, and dimensions 4 and 5 the sole. Those numbers come from a worked example in the team's first notebook that began, in effect, "suppose you want a high-top (Dim 8 = 2.5) and a white body (Dim 9 = −2.0)", written before any traversal had been looked at. The traversal grid in the same write-up shows dimension 8 doing almost nothing and dimensions 4 and 5 recoloring the whole shoe. One honest sentence, that the dimensions mostly encode brightness and hue and that none cleanly controls shape, would have been a finding.
+- **Calibrate β to the scale of your loss.** With the reconstruction term summed over 12,288 pixel values and 16 latents, β = 2 is a weak bottleneck. In the normalized units of the β-VAE paper, β times the latent size over the input size, it is about 0.003, where the paper's own settings ran from roughly 0.01 on dSprites to above 0.5 on 64 × 64 faces. Binary cross-entropy also weighs pixel errors more heavily than mean squared error does, especially near white and black, which is most of these images, so the improved run's β = 2 constrains the code less than the baseline's β = 4 did. The logs show it: the KL rose from 14.7 to 31.2 nats, so the code carries twice the information, which is the opposite of "a more organized latent space". At this β the model is close to a plain VAE, and the disentanglement the proposal hoped for was unlikely. A sweep over β with everything else fixed would have been the experiment.
+- **Hold data out and measure.** Every image is a training image, the reconstruction figure shows training images, and the comparison between the runs changes the loss, β, the epochs and the initialization at once, with no number attached. A held-out bound or reconstruction error per run, and the β sweep above, would have made "improved" a measurement. For disentanglement, UT Zappos50K ships attribute metadata (category, closure, heel height, toe style and more) that could score which dimension tracks which attribute.
+- **Use the posterior you learned.** The encoder's variances are never used. Decoding several samples of the code for one shoe would show what the model is unsure about, and the designer could show that spread instead of a single decode. The histograms of posterior means check the means only; a dimension can look well behaved there while its posteriors sit far from the prior.
+- **Keep the data out of the repository and state its terms.** The dataset is for academic, non-commercial use and the write-up never says so; 12,856 derived images were committed. Binary cross-entropy on gray-level pixels is also not a normalized likelihood, a small point worth knowing; the continuous Bernoulli distribution fixes it.
+- **Small things.** The write-up's demo link now serves an unrelated application; the notebooks named 02 and 03 call themselves 03 and 04 inside; the preprocessing notebook hard-codes a teammate's laptop path; an untrained checkpoint is committed without explanation; there is no license and no statement of who did what.
 
-### Training Output
-![Baseline Training Curve](docs/images/02_baseline_training_output_01.png)
+What the project does well: an end-to-end pipeline that runs from a clean environment file; a correctly implemented variational objective, with the closed-form KL and the reparameterization written out, and an annealing schedule plotted against the losses it affects; a latent-analysis notebook that goes well beyond the usual traversal grid; an interactive designer that makes a latent space tangible; and a write-up that explains the β-VAE idea in the team's own words.
 
+## About this project
 
----
+This project was built in Bayesian Machine Learning with Generative AI Applications (ADSP 32014), part of the Master of Science in Applied Data Science at the University of Chicago, in Winter 2026. It is shown here as an example for later cohorts.
 
-## 03 - Improved Training (BCE + KL Annealing)
+## Changes by course staff
 
-**Notebook**: `notebooks/03_improved_training_with_annealing.ipynb`
+Course staff forked the authors' repository and made these edits. The authors' notebooks, checkpoints and figures are unchanged.
 
-### What Changed vs Baseline (Three Core Differences)
+- Renamed the authors' README to `REPORT.md`, unchanged, and added this README with the program banner.
+- Removed the 12,856 processed dataset images from `data/`, about 52 MB, since the dataset is for academic, non-commercial use only and is not ours to redistribute. `data/README.md` explains how notebook 01 regenerates them. The images remain in the history.
+- Removed two Finder files and five Jupyter checkpoint copies of the notebooks, and added a `.gitignore`.
 
-1. **Initialization from the baseline model**
-- The improved model is trained by loading the baseline checkpoint first, instead of starting from random weights.
-- This means Stage 2 training starts from a model that already reconstructs sneaker structure reasonably well.
-- Practical effect: faster convergence and more stable improvement.
+## License
 
-2. **KL annealing (dynamic beta in ELBO)**
-- **a) ELBO and what beta means**
-  - VAE objective (minimized as loss):
-
-$$\mathcal{L} = \text{Reconstruction Loss} + \beta \cdot D_{KL}(q_\phi(z|x) || p(z))$$
-
-  - Here, $\beta$ controls the strength of latent regularization:
-  - Larger $\beta$ enforces a more organized latent space, but can hurt reconstruction quality.
-- **b) How we implemented it**
-  - Instead of using a fixed $\beta$ from epoch 1, we linearly increase $\beta$ from `0` to `2.0` during the first `10` epochs, then keep it at `2.0`.
-  - This is the `KL annealing` schedule used in Notebook 03.
-- **c) Why this helps**
-  - Early epochs focus more on reconstruction (easier optimization).
-  - Later epochs gradually enforce latent regularization.
-  - Net result: better balance between visual quality and latent controllability.
-
-3. **BCE reconstruction loss instead of MSE**
-- **a) BCE vs MSE**
-  - **MSE** penalizes squared pixel distance and often favors smoother outputs.
-  - **BCE** treats normalized pixels as probabilities and penalizes mismatch with cross-entropy.
-
-$$\sum_{i=1}^{D}\left[x_i \log(\hat{x}_i) + (1-x_i)\log(1-\hat{x}_i)\right]$$
-
-- **b) Why BCE can be better here**
-  - For normalized shoe images in `[0, 1]` with sigmoid output, BCE typically preserves local contrast and edge sharpness better.
-  - Practical effect in this project: cleaner contours and visually sharper sneaker details.
-
-### Training Output
-![Improved Training Curve](docs/images/03_01.png)
-
-![Improved Training Curve](docs/images/03_02.png)
-
-### Observations
-- The first figure isolates **KL Loss + Beta**, making annealing behavior easy to explain.
-- The second figure focuses on **Total/Reconstruction Loss + Beta**, showing optimization trend without KL scale compression.
-- Together, these plots show both optimization stability and regularization progression.
-
----
-
-## 04 - Latent Analysis with Rich Visualizations
-
-**Notebook**: `notebooks/04_latent_analysis_rich_visualization.ipynb`
-
-### Goal
-Analyze what each latent dimension learns and how controllable the generator is.
-
-### Visual Results
-
-#### Reconstruction Quality (Input vs Reconstruction)
-![Latent Analysis Output 1](docs/images/04_latent_analysis_rich_visualization_output_01.png)
-
-To evaluate whether the VAE learned meaningful representations, we compare the original sneaker images with their reconstructed outputs from the decoder.
-
-The reconstructions preserve the overall shape, color patterns, and silhouette of the sneakers, indicating that the encoder successfully compresses key visual information into the latent representation.
-
-Although the reconstructed images appear slightly smoother than the originals, this is typical for VAE models since they learn probabilistic representations rather than memorizing exact pixels. Overall, the results show that the model captures the main structural features of sneaker designs.
-
-#### Latent Traversal Grid
-![Latent Analysis Output 2](docs/images/04_latent_analysis_rich_visualization_output_02.png)
-
-To analyze how individual latent dimensions affect the generated designs, we perform latent traversal experiments by varying one dimension at a time while keeping the others fixed.
-
-The generated sneakers show smooth visual changes across columns. In several cases, the sneaker body color gradually shifts between darker and lighter tones.
-
-These results indicate that the latent space is continuous and that different dimensions capture distinct design attributes, suggesting partially disentangled representations learned by the β-VAE.
-
-#### Latent Mean Distribution
-![Latent Analysis Output 3](docs/images/04_latent_analysis_rich_visualization_output_03.png)
-
-To examine whether the learned latent space follows the expected prior distribution, we analyze the distribution of latent means for each dimension across the dataset.
-
-Most dimensions show distributions centered around zero and roughly resembling a Gaussian shape, which aligns with the standard normal prior enforced by the VAE objective.
-
-These results indicate that the latent space is properly regularized and structured for generative sampling.
-
-#### Latent Correlation Heatmap
-![Latent Analysis Output 4](docs/images/04_latent_analysis_rich_visualization_output_04.png)
-
-To examine whether the latent representations are disentangled, we compute the correlation matrix of the latent mean values across all dimensions.
-
-Most off-diagonal values in the heatmap are close to zero, indicating weak correlations between different latent dimensions.
-
-This suggests that the β-VAE encourages a relatively disentangled latent space, where each dimension captures more independent aspects of sneaker design.
-
-#### KL Contribution per Dimension
-![Latent Analysis Output 5](docs/images/04_latent_analysis_rich_visualization_output_05.png)
-
-This plot shows the average KL divergence contribution of each latent dimension.
-
-Dimensions with higher KL values carry more information about the data distribution, indicating that they play a more active role in encoding sneaker features within the latent space.
-
-#### Dimension Impact Bar
-![Latent Analysis Output 6](docs/images/04_latent_analysis_rich_visualization_output_06.png)
-
-This figure measures how much the generated image changes when a single latent dimension is modified.
-
-Dimensions with larger impact values cause stronger visual changes in the generated sneakers, suggesting that these dimensions have greater influence on the final design.
-
-#### Random Prior Samples
-![Latent Analysis Output 7](docs/images/04_latent_analysis_rich_visualization_output_07.png)
-
-#### Latent Interpolation
-![Latent Analysis Output 8](docs/images/04_latent_analysis_rich_visualization_output_08.png)
-
-This figure shows interpolation between two latent representations. By gradually moving between two points in the latent space, the model generates a smooth transition between sneaker designs.
-
-The gradual change in color and structure indicates that the latent space is continuous and well-structured, allowing meaningful transformations between different designs.
-
-### Insights
-Overall, the results show that the β-VAE learns a structured and meaningful latent space for sneaker design generation. The model reconstructs realistic sneakers, while latent traversal reveals that different dimensions control interpretable visual attributes. The latent distributions and correlation analysis indicate a well-regularized and relatively disentangled representation. In addition, KL contribution and dimension impact highlight which dimensions play a larger role in shaping the generated designs. Finally, interpolation results confirm that the latent space is continuous, enabling smooth transitions between different sneaker styles.
-
----
-
-## 05 - Interactive Custom Sneaker Design
-
-**Notebook**: `notebooks/05_custom_design_interactive.ipynb`  
-**Web App**: [http://dfuaix9nq1.com/](http://dfuaix9nq1.com/)
-
-### Goal
-Provide direct user control over latent dimensions (`Dim0` to `Dim15`) to generate custom sneaker designs interactively.
-
-### Features
-- Slider + numeric input for each latent dimension.
-- One-click generation.
-- Reset / randomize options.
-- HTML deployment with backend model inference.
-
-### Example Generated Design
-![Custom Sneaker Example](artifacts/generated/custom_sneaker.png)
-
-
-## Project Conclusion
-
-- End-to-end pipeline is fully notebook-based.
-- Model is trained, analyzed, and deployed to a live interactive website.
-- The system supports both research-style latent inspection and practical controllable design generation.
-
-## Future Optimizations & Outlook
-While this project successfully demonstrates a controllable generative pipeline, there are several exciting avenues for future improvement:
-
-* **Scaling to High-Resolution Generation:** Due to current computational constraints, our training pipeline and latent space are optimized for 64x64 images. With access to greater compute resources, a primary next step is upgrading the architecture (e.g., using deeper convolutional layers or exploring VQ-VAE architectures) to generate sharp, high-fidelity sneaker concepts at 256x256 or higher resolutions.
-* **Category-Specific Latent Spaces:** Currently, the model learns a generalized latent space for all sneakers. Future iterations could involve training specialized, dedicated models tailored to distinct footwear categories—such as running shoes, basketball sneakers, and casual wear. This would allow the models to capture fine-grained, category-specific details and textures that might get smoothed out in a single, generalized dataset.
+The authors have not added a license, so their work is shown here under GitHub's terms for public repositories. Ask them before reusing it. The dataset has its own terms, above.
